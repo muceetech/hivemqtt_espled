@@ -4,8 +4,8 @@ from umqttsimple import MQTTClient
 import machine
 
 # --- WiFi details
-ssid = 'Rajnarain'
-password = 'narain12'
+ssid = 'muceeteech'
+password = 'password'
 
 # --- MQTT broker
 mqtt_server = 'broker.emqx.io'
