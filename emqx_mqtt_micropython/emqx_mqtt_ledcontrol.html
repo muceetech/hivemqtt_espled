@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP LED Controller</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body style="text-align: center; margin-top: 50px; font-family: Arial;">
+
+  <h1>ESP8266 LED Control</h1>
+  <button onclick="ledOn()">Turn LED ON</button>
+  <button onclick="ledOff()">Turn LED OFF</button>
+
+  <h3 id="status">Connecting...</h3>
+  <h4 id="messages"></h4>
+
+<script>
+  let client;
+  let connected = false;
+
+  function connectMQTT() {
+    client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+
+    client.on('connect', function () {
+      console.log('Connected!');
+      connected = true;
+      document.getElementById('status').innerHTML = "Connected to MQTT";
+      client.subscribe('esp/led');
+    });
+
+    client.on('message', function (topic, message) {
+      console.log('Message:', topic, message.toString());
+      document.getElementById('messages').innerHTML = `Message: ${message}`;
+    });
+
+    client.on('close', function () {
+      connected = false;
+      document.getElementById('status').innerHTML = "Disconnected, retrying...";
+      setTimeout(connectMQTT, 3000); // Retry after 3 seconds
+    });
+  }
+
+  function ledOn() {
+    if (connected) {
+      client.publish('esp/led', 'on');
+      document.getElementById('messages').innerHTML = 'Sent: LED ON';
+    }
+  }
+
+  function ledOff() {
+    if (connected) {
+      client.publish('esp/led', 'off');
+      document.getElementById('messages').innerHTML = 'Sent: LED OFF';
+    }
+  }
+
+  connectMQTT();
+</script>
+
+</body>
+</html>
