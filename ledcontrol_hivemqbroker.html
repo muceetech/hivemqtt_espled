@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP8266 LED Control with Auto-Reconnect</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    button { font-size: 20px; margin: 10px; padding: 10px 30px; }
+    #status { margin-top: 20px; font-size: 18px; }
+    .connected { color: green; }
+    .disconnected { color: red; }
+    .message { color: blue; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>ESP8266 LED Controller</h1>
+
+  <button onclick="ledOn()">LED ON</button>
+  <button onclick="ledOff()">LED OFF</button>
+
+  <div id="status" class="disconnected">Disconnected</div>
+  <div id="message" class="message"></div>
+
+  <script>
+    let client = null;
+    const statusDiv = document.getElementById('status');
+    const messageDiv = document.getElementById('message');
+
+    function connectMQTT() {
+      console.log('Trying to connect to MQTT Broker...');
+      client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+      client.on('connect', function () {
+        console.log('Connected to MQTT Broker');
+        statusDiv.textContent = 'Connected';
+        statusDiv.className = 'connected';
+
+        client.subscribe('esp/led', function (err) {
+          if (!err) {
+            console.log('Subscribed to topic: esp/led');
+            messageDiv.textContent = 'Subscribed to topic: esp/led';
+          } else {
+            console.error('Subscription error:', err);
+            messageDiv.textContent = 'Subscription error';
+          }
+        });
+      });
+
+      client.on('error', function (err) {
+        console.error('Connection error:', err);
+        client.end();
+      });
+
+      client.on('close', function () {
+        console.log('Disconnected from MQTT Broker');
+        statusDiv.textContent = 'Disconnected';
+        statusDiv.className = 'disconnected';
+        retryConnection();
+      });
+
+      client.on('message', function (topic, message) {
+        console.log('Received:', topic, message.toString());
+        messageDiv.textContent = `Received on ${topic}: ${message}`;
+      });
+    }
+
+    function retryConnection() {
+      setTimeout(function () {
+        console.log('Reconnecting to MQTT Broker...');
+        connectMQTT();
+      }, 3000); // Try again every 3 seconds
+    }
+
+    function ledOn() {
+      if (client && client.connected) {
+        client.publish('esp/led', 'on', {}, function(err) {
+          if (!err) {
+            console.log('LED ON published');
+            messageDiv.textContent = 'Published: LED ON';
+          } else {
+            console.error('Publish error:', err);
+            messageDiv.textContent = 'Publish error';
+          }
+        });
+      } else {
+        console.warn('Cannot publish, not connected');
+        messageDiv.textContent = 'Not connected, cannot publish!';
+      }
+    }
+
+    function ledOff() {
+      if (client && client.connected) {
+        client.publish('esp/led', 'off', {}, function(err) {
+          if (!err) {
+            console.log('LED OFF published');
+            messageDiv.textContent = 'Published: LED OFF';
+          } else {
+            console.error('Publish error:', err);
+            messageDiv.textContent = 'Publish error';
+          }
+        });
+      } else {
+        console.warn('Cannot publish, not connected');
+        messageDiv.textContent = 'Not connected, cannot publish!';
+      }
+    }
+
+    // Start first connection
+    connectMQTT();
+  </script>
+</body>
+</html>
